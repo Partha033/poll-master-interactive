@@ -1,14 +1,26 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { usePoll } from '@/context/PollContext';
+import RoleSelection from './RoleSelection';
+import TeacherDashboard from './TeacherDashboard';
+import StudentInterface from './StudentInterface';
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
+  const { state } = usePoll();
+
+  // Show role selection if no role is chosen
+  if (!state.userRole) {
+    return <RoleSelection />;
+  }
+
+  // Show appropriate dashboard based on role
+  if (state.userRole === 'teacher') {
+    return <TeacherDashboard />;
+  }
+
+  if (state.userRole === 'student') {
+    return <StudentInterface />;
+  }
+
+  return <RoleSelection />;
 };
 
 export default Index;
