@@ -1,36 +1,44 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { usePoll } from '@/context/PollContext';
-import { PollResults } from '@/components/PollResults';
+import { useAssessment } from '@/context/AssessmentContext';
+import { AssessmentResults } from '@/components/PollResults';
 import { Timer } from '@/components/Timer';
-import { User, Vote, Clock, CheckCircle } from 'lucide-react';
+import { NavigationHeader } from '@/components/ui/navigation';
+import { User, CheckSquare, Clock, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function StudentInterface() {
-  const { state, setStudentName, submitVote } = usePoll();
+  const { state, setStudentName, submitAnswer, resetUserRole, joinSession } = useAssessment();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [tempName, setTempName] = useState('');
   const [selectedOption, setSelectedOption] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [timeUp, setTimeUp] = useState(false);
 
-  const activePoll = state.allPolls.find(poll => poll.isActive);
-  const studentVote = activePoll ? state.votes.find(
-    vote => vote.pollId === activePoll.id && vote.studentName === state.studentName
+  const activeAssessment = state.allAssessments.find(assessment => assessment.isActive);
+  const studentAnswer = activeAssessment ? state.answers.find(
+    answer => answer.assessmentId === activeAssessment.id && answer.studentName === state.studentName
   ) : null;
 
+  const handleBackToRoleSelection = () => {
+    resetUserRole();
+    navigate('/');
+  };
+
   useEffect(() => {
-    if (activePoll && studentVote) {
+    if (activeAssessment && studentAnswer) {
       setHasSubmitted(true);
     } else {
       setHasSubmitted(false);
       setTimeUp(false);
     }
-  }, [activePoll, studentVote]);
+  }, [activeAssessment, studentAnswer]);
 
   const handleNameSubmit = () => {
     if (!tempName.trim()) {
@@ -43,21 +51,22 @@ export default function StudentInterface() {
     }
 
     setStudentName(tempName.trim());
+    joinSession(tempName.trim());
     toast({
       title: "Welcome!",
-      description: `Hello ${tempName.trim()}! You're now ready to participate in polls.`,
+      description: `Hello ${tempName.trim()}! You're now ready to participate in assessments.`,
     });
   };
 
-  const handleVoteSubmit = () => {
-    if (!selectedOption || !activePoll) return;
+  const handleAnswerSubmit = () => {
+    if (!selectedOption || !activeAssessment) return;
 
-    submitVote(activePoll.id, selectedOption, state.studentName);
+    submitAnswer(activeAssessment.id, selectedOption, state.studentName);
     setHasSubmitted(true);
     setSelectedOption('');
     toast({
-      title: "Vote Submitted!",
-      description: "Your vote has been recorded successfully.",
+      title: "Answer Submitted!",
+      description: "Your answer has been recorded successfully.",
     });
   };
 
@@ -65,7 +74,7 @@ export default function StudentInterface() {
     setTimeUp(true);
     toast({
       title: "Time's Up!",
-      description: "The voting period has ended. Showing results...",
+      description: "The assessment period has ended. Showing results...",
       variant: "destructive",
     });
   };
@@ -81,7 +90,7 @@ export default function StudentInterface() {
             </div>
             <CardTitle className="text-2xl">Welcome Student!</CardTitle>
             <p className="text-muted-foreground">
-              Enter your name to join the live polling session
+              Enter your name to join the live assessment session
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -111,33 +120,26 @@ export default function StudentInterface() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card shadow-sm">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Student Dashboard</h1>
-              <p className="text-muted-foreground">Welcome, {state.studentName}!</p>
-            </div>
-            <Badge variant="outline" className="text-sm">
-              <User className="w-4 h-4 mr-2" />
-              {state.studentName}
-            </Badge>
-          </div>
-        </div>
-      </div>
+      <NavigationHeader
+        title="Student Dashboard"
+        subtitle={`Welcome, ${state.studentName}!`}
+        showBackButton={true}
+        onBack={handleBackToRoleSelection}
+        userRole="student"
+        userName={state.studentName}
+      />
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto space-y-6">
-          {/* Active Poll or Waiting */}
-          {activePoll ? (
+          {/* Active Assessment or Waiting */}
+          {activeAssessment ? (
             <Card className="shadow-lg border-primary">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <Vote className="w-5 h-5" />
-                      Active Poll
+                      <CheckSquare className="w-5 h-5" />
+                      Active Assessment
                     </CardTitle>
                     <Badge variant="default">Live</Badge>
                   </div>
@@ -148,24 +150,24 @@ export default function StudentInterface() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-semibold mb-4">{activePoll.question}</h3>
+                  <h3 className="text-xl font-semibold mb-4">{activeAssessment.question}</h3>
                   
                   {/* Timer */}
                   {!hasSubmitted && !timeUp && (
                     <Timer
-                      duration={activePoll.timeLimit}
+                      duration={activeAssessment.timeLimit}
                       isActive={true}
                       onComplete={handleTimeUp}
                     />
                   )}
                 </div>
 
-                {/* Voting Options */}
+                {/* Assessment Options */}
                 {!hasSubmitted && !timeUp ? (
                   <div className="space-y-3">
                     <Label className="text-base font-medium">Choose your answer:</Label>
                     <div className="grid gap-3">
-                      {activePoll.options.map((option, index) => (
+                      {activeAssessment.options.map((option, index) => (
                         <Button
                           key={index}
                           variant={selectedOption === option ? "default" : "poll"}
@@ -185,12 +187,12 @@ export default function StudentInterface() {
                     </div>
                     
                     <Button 
-                      onClick={handleVoteSubmit}
+                      onClick={handleAnswerSubmit}
                       disabled={!selectedOption}
                       className="w-full mt-4"
                       size="lg"
                     >
-                      Submit Vote
+                      Submit Answer
                     </Button>
                   </div>
                 ) : (
@@ -200,7 +202,7 @@ export default function StudentInterface() {
                       <div className="flex items-center gap-2 text-success bg-success-light p-3 rounded-lg">
                         <CheckCircle className="w-5 h-5" />
                         <span className="font-medium">
-                          Your vote for "{studentVote?.option}" has been recorded!
+                          Your answer "{studentAnswer?.option}" has been recorded!
                         </span>
                       </div>
                     )}
@@ -209,56 +211,56 @@ export default function StudentInterface() {
                       <div className="flex items-center gap-2 text-destructive bg-destructive-light p-3 rounded-lg">
                         <Clock className="w-5 h-5" />
                         <span className="font-medium">
-                          Time expired! You didn't submit a vote in time.
+                          Time expired! You didn't submit an answer in time.
                         </span>
                       </div>
                     )}
                     
-                    <PollResults pollId={activePoll.id} />
+                    <AssessmentResults assessmentId={activeAssessment.id} />
                   </div>
                 )}
               </CardContent>
             </Card>
           ) : (
-            /* No Active Poll */
+            /* No Active Assessment */
             <Card className="shadow-md">
               <CardContent className="text-center py-12">
                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Vote className="w-8 h-8 text-muted-foreground" />
+                  <CheckSquare className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">No Active Poll</h3>
+                <h3 className="text-xl font-semibold mb-2">No Active Assessment</h3>
                 <p className="text-muted-foreground">
-                  Wait for your teacher to start a new poll. When they do, it will appear here automatically.
+                  Wait for your teacher to start a new assessment. When they do, it will appear here automatically.
                 </p>
               </CardContent>
             </Card>
           )}
 
-          {/* Poll History */}
-          {state.allPolls.length > 0 && (
+          {/* Assessment History */}
+          {state.allAssessments.length > 0 && (
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle>Previous Polls</CardTitle>
+                <CardTitle>Previous Assessments</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {state.allPolls
-                    .filter(poll => !poll.isActive)
-                    .map((poll) => {
-                      const userVote = state.votes.find(
-                        vote => vote.pollId === poll.id && vote.studentName === state.studentName
+                  {state.allAssessments
+                    .filter(assessment => !assessment.isActive)
+                    .map((assessment) => {
+                      const userAnswer = state.answers.find(
+                        answer => answer.assessmentId === assessment.id && answer.studentName === state.studentName
                       );
                       return (
-                        <div key={poll.id} className="border rounded-lg p-4">
+                        <div key={assessment.id} className="border rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium">{poll.question}</h4>
-                            <Badge variant={userVote ? "success" : "secondary"}>
-                              {userVote ? "Participated" : "Missed"}
+                            <h4 className="font-medium">{assessment.question}</h4>
+                            <Badge variant={userAnswer ? "success" : "secondary"}>
+                              {userAnswer ? "Participated" : "Missed"}
                             </Badge>
                           </div>
-                          {userVote && (
+                          {userAnswer && (
                             <p className="text-sm text-muted-foreground">
-                              Your answer: <span className="font-medium">{userVote.option}</span>
+                              Your answer: <span className="font-medium">{userAnswer.option}</span>
                             </p>
                           )}
                         </div>

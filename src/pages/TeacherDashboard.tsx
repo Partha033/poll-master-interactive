@@ -1,27 +1,36 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { usePoll } from '@/context/PollContext';
-import { PollResults } from '@/components/PollResults';
-import { Plus, Play, Square, Users, BarChart } from 'lucide-react';
+import { useAssessment } from '@/context/AssessmentContext';
+import { AssessmentResults } from '@/components/PollResults';
+import { AttendanceTracker } from '@/components/AttendanceTracker';
+import { NavigationHeader } from '@/components/ui/navigation';
+import { Plus, Play, Square, Users, BarChart, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function TeacherDashboard() {
-  const { state, createPoll, startPoll, endPoll, canCreateNewPoll } = usePoll();
+  const { state, createAssessment, startAssessment, endAssessment, canCreateNewAssessment, resetUserRole } = useAssessment();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
-  const [newPoll, setNewPoll] = useState({
+  const [newAssessment, setNewAssessment] = useState({
     question: '',
     options: ['', ''],
     timeLimit: 60,
   });
 
-  const handleCreatePoll = () => {
-    if (!newPoll.question.trim()) {
+  const handleBackToRoleSelection = () => {
+    resetUserRole();
+    navigate('/');
+  };
+
+  const handleCreateAssessment = () => {
+    if (!newAssessment.question.trim()) {
       toast({
         title: "Error",
         description: "Please enter a question",
@@ -30,7 +39,7 @@ export default function TeacherDashboard() {
       return;
     }
 
-    const validOptions = newPoll.options.filter(opt => opt.trim());
+    const validOptions = newAssessment.options.filter(opt => opt.trim());
     if (validOptions.length < 2) {
       toast({
         title: "Error",
@@ -40,25 +49,25 @@ export default function TeacherDashboard() {
       return;
     }
 
-    createPoll(newPoll.question, validOptions, newPoll.timeLimit);
-    setNewPoll({ question: '', options: ['', ''], timeLimit: 60 });
+    createAssessment(newAssessment.question, validOptions, newAssessment.timeLimit);
+    setNewAssessment({ question: '', options: ['', ''], timeLimit: 60 });
     setIsCreating(false);
     toast({
       title: "Success",
-      description: "Poll created successfully!",
+      description: "Assessment created successfully!",
     });
   };
 
   const addOption = () => {
-    setNewPoll(prev => ({
+    setNewAssessment(prev => ({
       ...prev,
       options: [...prev.options, ''],
     }));
   };
 
   const removeOption = (index: number) => {
-    if (newPoll.options.length > 2) {
-      setNewPoll(prev => ({
+    if (newAssessment.options.length > 2) {
+      setNewAssessment(prev => ({
         ...prev,
         options: prev.options.filter((_, i) => i !== index),
       }));
@@ -66,92 +75,92 @@ export default function TeacherDashboard() {
   };
 
   const updateOption = (index: number, value: string) => {
-    setNewPoll(prev => ({
+    setNewAssessment(prev => ({
       ...prev,
       options: prev.options.map((opt, i) => i === index ? value : opt),
     }));
   };
 
-  const handleStartPoll = (pollId: string) => {
-    startPoll(pollId);
+  const handleStartAssessment = (assessmentId: string) => {
+    startAssessment(assessmentId);
     toast({
-      title: "Poll Started",
-      description: "Students can now vote on this poll",
+      title: "Assessment Started",
+      description: "Students can now take this assessment",
     });
   };
 
-  const handleEndPoll = (pollId: string) => {
-    endPoll(pollId);
+  const handleEndAssessment = (assessmentId: string) => {
+    endAssessment(assessmentId);
     toast({
-      title: "Poll Ended",
-      description: "Voting has been closed for this poll",
+      title: "Assessment Ended",
+      description: "Assessment has been closed for submissions",
     });
   };
 
-  const activePoll = state.allPolls.find(poll => poll.isActive);
+  const activeAssessment = state.allAssessments.find(assessment => assessment.isActive);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card shadow-sm">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Teacher Dashboard</h1>
-              <p className="text-muted-foreground">Create and manage your live polls</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                <span className="text-sm font-medium">{state.students.length} Students</span>
-              </div>
-              {canCreateNewPoll() ? (
-                <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Poll
-                </Button>
-              ) : (
-                <Badge variant="secondary">
-                  Wait for all students to vote
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <NavigationHeader
+        title="Teacher Dashboard"
+        subtitle="Create and manage assessments, track student attendance"
+        showBackButton={true}
+        onBack={handleBackToRoleSelection}
+        userRole="teacher"
+        userName="Teacher"
+      />
 
       <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              <span className="text-sm font-medium">{state.students.length} Students Online</span>
+            </div>
+          </div>
+          {canCreateNewAssessment() ? (
+            <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Assessment
+            </Button>
+          ) : (
+            <Badge variant="secondary">
+              Wait for all students to complete
+            </Badge>
+          )}
+        </div>
+
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Create Poll Form */}
+            {/* Create Assessment Form */}
             {isCreating && (
               <Card className="shadow-md">
                 <CardHeader>
-                  <CardTitle>Create New Poll</CardTitle>
+                  <CardTitle>Create New Assessment</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="question">Question</Label>
                     <Textarea
                       id="question"
-                      placeholder="Enter your poll question..."
-                      value={newPoll.question}
-                      onChange={(e) => setNewPoll(prev => ({ ...prev, question: e.target.value }))}
+                      placeholder="Enter your assessment question..."
+                      value={newAssessment.question}
+                      onChange={(e) => setNewAssessment(prev => ({ ...prev, question: e.target.value }))}
                     />
                   </div>
 
                   <div>
                     <Label>Options</Label>
                     <div className="space-y-2">
-                      {newPoll.options.map((option, index) => (
+                      {newAssessment.options.map((option, index) => (
                         <div key={index} className="flex gap-2">
                           <Input
                             placeholder={`Option ${index + 1}`}
                             value={option}
                             onChange={(e) => updateOption(index, e.target.value)}
                           />
-                          {newPoll.options.length > 2 && (
+                          {newAssessment.options.length > 2 && (
                             <Button
                               variant="outline"
                               size="icon"
@@ -175,13 +184,13 @@ export default function TeacherDashboard() {
                       type="number"
                       min="10"
                       max="300"
-                      value={newPoll.timeLimit}
-                      onChange={(e) => setNewPoll(prev => ({ ...prev, timeLimit: parseInt(e.target.value) }))}
+                      value={newAssessment.timeLimit}
+                      onChange={(e) => setNewAssessment(prev => ({ ...prev, timeLimit: parseInt(e.target.value) }))}
                     />
                   </div>
 
                   <div className="flex gap-2">
-                    <Button onClick={handleCreatePoll}>Create Poll</Button>
+                    <Button onClick={handleCreateAssessment}>Create Assessment</Button>
                     <Button variant="outline" onClick={() => setIsCreating(false)}>
                       Cancel
                     </Button>
@@ -190,63 +199,63 @@ export default function TeacherDashboard() {
               </Card>
             )}
 
-            {/* Active Poll */}
-            {activePoll && (
+            {/* Active Assessment */}
+            {activeAssessment && (
               <Card className="shadow-md border-primary">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <BarChart className="w-5 h-5" />
-                        Active Poll
+                        Active Assessment
                       </CardTitle>
                       <Badge variant="default">Live</Badge>
                     </div>
                     <Button 
                       variant="destructive" 
-                      onClick={() => handleEndPoll(activePoll.id)}
+                      onClick={() => handleEndAssessment(activeAssessment.id)}
                     >
                       <Square className="w-4 h-4 mr-2" />
-                      End Poll
+                      End Assessment
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <PollResults pollId={activePoll.id} />
+                <CardContent className="space-y-6">
+                  <AssessmentResults assessmentId={activeAssessment.id} />
+                  <AttendanceTracker assessmentId={activeAssessment.id} />
                 </CardContent>
               </Card>
             )}
 
-            {/* Poll History */}
+            {/* Assessment History */}
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle>All Polls</CardTitle>
+                <CardTitle>All Assessments</CardTitle>
               </CardHeader>
               <CardContent>
-                {state.allPolls.length === 0 ? (
+                {state.allAssessments.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">
-                    No polls created yet. Create your first poll to get started!
+                    No assessments created yet. Create your first assessment to get started!
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {state.allPolls.map((poll) => (
-                      <div key={poll.id} className="border rounded-lg p-4">
+                    {state.allAssessments.map((assessment) => (
+                      <div key={assessment.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h4 className="font-medium">{poll.question}</h4>
+                            <h4 className="font-medium">{assessment.question}</h4>
                             <p className="text-sm text-muted-foreground">
-                              Created: {poll.createdAt.toLocaleDateString()}
+                              Created: {assessment.createdAt.toLocaleDateString()}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={poll.isActive ? "default" : "secondary"}>
-                              {poll.isActive ? "Active" : "Inactive"}
+                            <Badge variant={assessment.isActive ? "default" : "secondary"}>
+                              {assessment.isActive ? "Active" : "Completed"}
                             </Badge>
-                            {!poll.isActive && (
+                            {!assessment.isActive && !activeAssessment && (
                               <Button
                                 size="sm"
-                                onClick={() => handleStartPoll(poll.id)}
-                                disabled={!!activePoll}
+                                onClick={() => handleStartAssessment(assessment.id)}
                               >
                                 <Play className="w-4 h-4 mr-1" />
                                 Start
@@ -271,16 +280,16 @@ export default function TeacherDashboard() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
-                  <span>Total Polls:</span>
-                  <Badge variant="outline">{state.allPolls.length}</Badge>
+                  <span>Total Assessments:</span>
+                  <Badge variant="outline">{state.allAssessments.length}</Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span>Active Students:</span>
-                  <Badge variant="outline">{state.students.length}</Badge>
+                  <span>Online Students:</span>
+                  <Badge variant="outline">{state.students.filter(s => s.isOnline).length}</Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span>Total Votes:</span>
-                  <Badge variant="outline">{state.votes.length}</Badge>
+                  <span>Total Submissions:</span>
+                  <Badge variant="outline">{state.answers.length}</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -288,18 +297,18 @@ export default function TeacherDashboard() {
             {/* Active Students */}
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle>Active Students</CardTitle>
+                <CardTitle>Online Students</CardTitle>
               </CardHeader>
               <CardContent>
-                {state.students.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No students joined yet</p>
+                {state.students.filter(s => s.isOnline).length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No students online yet</p>
                 ) : (
                   <div className="space-y-2">
-                    {state.students.map((student, index) => (
+                    {state.students.filter(s => s.isOnline).map((student, index) => (
                       <div key={index} className="flex items-center justify-between">
                         <span className="text-sm">{student.name}</span>
-                        <Badge variant={student.hasVoted ? "success" : "secondary"} className="text-xs">
-                          {student.hasVoted ? "Voted" : "Waiting"}
+                        <Badge variant={student.hasAnswered ? "success" : "secondary"} className="text-xs">
+                          {student.hasAnswered ? "Completed" : "Waiting"}
                         </Badge>
                       </div>
                     ))}

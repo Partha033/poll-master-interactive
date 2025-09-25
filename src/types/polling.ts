@@ -1,4 +1,4 @@
-export interface Poll {
+export interface Assessment {
   id: string;
   question: string;
   options: string[];
@@ -6,39 +6,57 @@ export interface Poll {
   isActive: boolean;
   timeLimit: number; // in seconds
   startedAt?: Date;
+  endedAt?: Date;
+  totalParticipants?: number;
 }
 
-export interface Vote {
-  pollId: string;
+export interface Answer {
+  assessmentId: string;
   studentName: string;
   option: string;
   timestamp: Date;
+  isCorrect?: boolean;
 }
 
 export interface Student {
   name: string;
   sessionId: string;
-  hasVoted: boolean;
-  lastVote?: Vote;
+  hasAnswered: boolean;
+  lastAnswer?: Answer;
+  joinedAt: Date;
+  isOnline: boolean;
 }
 
-export interface PollResults {
-  pollId: string;
-  totalVotes: number;
+export interface AssessmentResults {
+  assessmentId: string;
+  totalAnswers: number;
   results: {
     option: string;
-    votes: number;
+    answers: number;
     percentage: number;
   }[];
-  voters: string[];
+  participants: string[];
+  attendanceRate: number;
+}
+
+export interface AttendanceData {
+  totalStudents: number;
+  participatedStudents: number;
+  attendanceRate: number;
+  studentList: {
+    name: string;
+    participated: boolean;
+    joinedAt?: Date;
+    answeredAt?: Date;
+  }[];
 }
 
 export type UserRole = 'teacher' | 'student' | null;
 
-export interface PollSystemState {
-  currentPoll: Poll | null;
-  allPolls: Poll[];
-  votes: Vote[];
+export interface AssessmentSystemState {
+  currentAssessment: Assessment | null;
+  allAssessments: Assessment[];
+  answers: Answer[];
   students: Student[];
   userRole: UserRole;
   studentName: string;
